@@ -1,0 +1,73 @@
+﻿@using Microsoft.Data.SqlClient
+
+@page "/"
+
+@inject SqlConnection db
+@inject NavigationManager NavigationManager
+
+<PageTitle>Name Change</PageTitle>
+
+@if (EmployeeId == null)
+{
+    <div>
+        <label>Employee ID</label>
+        <InputText @bind-Value="id" />
+    </div>
+    <button @onclick="NavigateToEmployee">Go</button>
+}
+else
+{
+    <div>
+        <label>Current Name</label>
+        <InputText @bind-Value="oldName" disabled="true" />
+    </div>
+
+    <div>
+        <label>New Name</label>
+        <InputText @bind-Value="newName" />
+    </div>
+
+    <button disabled="@string.IsNullOrWhiteSpace(newName)" @onclick="UpdateName">Update</button>
+}
+@code {
+    [Parameter, SupplyParameterFromQuery] public string? EmployeeId { get; set; }
+
+    string id = "";
+    string oldName = "";
+    string newName = "";
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(EmployeeId))
+        {
+            using var cmd = db.CreateCommand();
+            cmd.CommandText = "SELECT Name FROM Employees WHERE Id = @id";
+            cmd.Parameters.AddWithValue("@id", EmployeeId);
+
+            var result = cmd.ExecuteScalar();
+            if (result != null)
+            {
+                oldName = result.ToString()!;
+            }
+        }
+    }
+
+    void UpdateName()
+    {
+        if (string.IsNullOrWhiteSpace(newName)) return;
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "UPDATE Employees SET Name = @newName WHERE Id = @id";
+        cmd.Parameters.AddWithValue("@newName", newName);
+        cmd.Parameters.AddWithValue("@id", EmployeeId);
+        cmd.ExecuteNonQuery();
+    }
+
+    void NavigateToEmployee()
+    {
+        if (!string.IsNullOrWhiteSpace(id))
+        {
+            NavigationManager.NavigateTo(NavigationManager.Uri + $"?EmployeeId={id}");
+        }
+    }
+}
